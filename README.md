@@ -1,0 +1,2 @@
+# hopfieldNetwork
+Hopfield network implementation
