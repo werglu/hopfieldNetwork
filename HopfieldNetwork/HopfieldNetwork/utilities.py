@@ -1,12 +1,6 @@
 import numpy as np
 import pandas as pd
-import random
 import matplotlib.pyplot as plt
-
-
-def read_data(filename):
-    df = pd.read_csv(f"data/{filename}", header=None)
-    return df
 
 
 def visualize_data(filename, height, width):
@@ -42,3 +36,26 @@ def show(x, col):
         else:
             print(' ', end=''),
     print()
+
+
+def get_weights_hebb(x):
+    w = np.zeros([len(x), len(x)])
+    for i in range(len(x)):
+        for j in range(i, len(x)):
+            if i == j:
+                w[i, j] = 0
+            else:
+                w[i, j] = x[i] * x[j]
+                w[j, i] = w[i, j]
+    return w
+
+
+def get_test_data(x, points_count, random_generator):
+    test_data = np.array(x)
+    n = len(x)
+    noise_position = list(range(n))
+    random_generator.shuffle(noise_position)
+    for k in noise_position[:points_count]:  # invert points_count points in the pattern
+        test_data[k] = -test_data[k]
+    test_data = test_data.reshape((n, 1))
+    return test_data

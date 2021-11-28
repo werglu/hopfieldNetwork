@@ -1,78 +1,174 @@
 import numpy as np
-import pandas as pd
-import random
-from utilities import read_data, visualize_result, show
-import matplotlib.pyplot as plt
+from enum import Enum
 
 
-def get_weights_hebb(x):
-    w = np.zeros([len(x), len(x)])
-    for i in range(len(x)):
-        for j in range(i, len(x)):
-            if i == j:
-                w[i, j] = 0
-            else:
-                w[i, j] = x[i] * x[j]
-                w[j, i] = w[i, j]
-    return w
+class Mode(Enum):
+    Synchronous = 1
+    Asynchronous = 2
 
 
-def get_weights_matrix_hebb_rule(X, M, N):
-    T = np.dot(X, np.transpose(X)) - M * np.eye(N)
-    T = np.divide(T, N)
-    return T
+class LearningRule(Enum):
+    Hebb = 1
+    Oja = 2
 
 
-def get_max_iter_count(M):
-    return 4**(2**(M-1))
+class HopfieldNetwork:
 
+    def __init__(self, rule, mode, X, vectors_count, sample_size, random_seed):
+        self.rule = rule
+        self.mode = mode
+        self.X = X
+        self.vectors_count = vectors_count
+        self.neurons_count = sample_size
+        self.random_generator = np.random.default_rng(seed=random_seed)
 
-def get_test_data(x, points_count, random_generator):
-    test_data = np.array(x)
-    n = len(x)
-    noise_position = list(range(n))
-    random_generator.shuffle(noise_position)
-    for k in noise_position[:points_count]:  # invert points_count points in the pattern
-        test_data[k] = -test_data[k]
-    test_data = test_data.reshape((n, 1))
-    return test_data
+    def _get_max_iter_count(self):
+        m = self.vectors_count
+        return 4**(2**(m-1))
 
-# TODO - dlaczego theta jest 0.5? mi to psuje wyniki
-def process(w, y_vec, theta=0.5, time=100):
-    for s in range(time):
-        m = len(y_vec)
-        # i = random.randint(0,m-1)
-        for i in range(m):
-            u = np.dot(w[i][:],
-                       y_vec) - theta  # COMMENT: w sumie nie wiem czy to jest sync czy async ale uaktualniam wszytskie po prostu
-            if u >= 0:
-                y_vec[i] = 1
-            elif u < 0:
-                y_vec[i] = -1
+    def _get_weights_matrix_hebb_rule(self):
+        X = self.X
+        m = self.vectors_count
+        n = self.neurons_count
 
-    return y_vec
+        T = np.matmul(X, np.transpose(X)) - m * np.eye(n)
+        T = np.divide(T, n)
+        return T
 
+    def _get_weights_matrix_oja_rule(self, nu, iter_count, eps=1e-14):
+        t = self._get_weights_matrix_hebb_rule()
 
-def recognition_phase_synchronous(weights, y_vec, max_iter_count):
-    y_prev = np.copy(y_vec)
-    y_prev[0] -= 1
-    curr_iter = 1
-    while (not np.array_equal(y_prev, y_vec)) and curr_iter < max_iter_count:
-        print(curr_iter)
+        X = self.X
+        m = self.vectors_count
+        n = self.neurons_count
+
+        curr_iter = 0
+        while curr_iter < iter_count:
+            curr_iter += 1
+            print(curr_iter)
+            t_prev = np.copy(t)
+            for k in range(0, m):
+                x_k = X[:, k]
+                y_k = np.matmul(t, x_k)
+                for i in range(n):
+                    for j in range(n):
+                        # p = np.multiply(y_k[i], t[i, :])
+                        # r = np.multiply(y_k[i], (x_k - p))
+                        t[i, j] = nu * y_k[i] * (x_k[j] - y_k[i] * t[i, j])
+                    # p = np.multiply(y_k[i], t[i, :])
+                    # r = np.multiply(y_k[i], (x_k - p))
+                    # t[i, :] += np.multiply(nu, r)
+
+            if np.linalg.norm(t - t_prev) < eps:
+                break
+        # TODO - czy zerować wagi na głównej przekątnej?
+        np.fill_diagonal(t, 0)
+        return t
+
+    def get_weights(self, nu=None, iter_count=None, eps=1e-14):
+        if self.rule == LearningRule.Hebb:
+            return self._get_weights_matrix_hebb_rule()
+        else:
+            return self._get_weights_matrix_oja_rule(nu, iter_count, eps)
+
+    def recognize(self, weights, y_vec, max_iter_count=None, show_data=None):
+
+        if not max_iter_count:
+            max_iter_count = self._get_max_iter_count()
+
         y_prev = np.copy(y_vec)
-        u = np.dot(weights, y_vec)
-        for i in range(len(u)):
-            if u[i] >= 0:
-                y_vec[i] = 1
-            else:
-                y_vec[i] = -1
-        curr_iter += 1
-    if np.array_equal(y_prev, y_vec):
-        print("Model convergence")
-    else:
-        print("Iter exceeded")
-    return y_vec
+        curr_iter = 1
+        convergence = False
+        while (not convergence) and curr_iter < max_iter_count:
+            if show_data:
+                print(curr_iter)
+            y_prev = np.copy(y_vec)
+            u = np.matmul(weights, y_vec)
 
+            if self.mode == Mode.Synchronous:
+                self._update_sychronous(y_vec, u)
+            else:
+                self._update_asychronous(y_vec, u)
+
+            curr_iter += 1
+        convergence = np.array_equal(y_prev, y_vec)
+        if convergence:
+            print("Model convergence at {0} iter".format(curr_iter))
+        else:
+            print("Iter exceeded")
+        return y_vec
+
+    def _update_neuron_value(self, val):
+        if val >= 0:
+            return 1
+        else:
+            return -1
+
+    def _update_sychronous(self, y, u):
+        for i in range(len(u)):
+            y[i] = self._update_neuron_value(u[i])
+
+    def _update_asychronous(self, y, u):
+        neu_i = self.random_generator.integers(0, len(y))
+        y[neu_i] = self._update_neuron_value(u[neu_i])
+
+    def set_mode(self, new_mode):
+        self.mode = new_mode
+
+    def set_learning_rule(self, rule):
+        self.rule = rule
+
+    # def recognition_phase_synchronous(slef, weights, y_vec, max_iter_count):
+    #     y_prev = np.copy(y_vec)
+    #     y_prev[0] -= 1
+    #     curr_iter = 1
+    #     while (not np.array_equal(y_prev, y_vec)) and curr_iter < max_iter_count:
+    #         print(curr_iter)
+    #         y_prev = np.copy(y_vec)
+    #         u = np.matmul(weights, y_vec)
+    #         update_sychronous(y_vec, u)
+    #
+    #         curr_iter += 1
+    #     if np.array_equal(y_prev, y_vec):
+    #         print("Model convergence")
+    #     else:
+    #         print("Iter exceeded")
+    #     return y_vec
+    #
+    #
+    # def recognition_phase_asynchronous(weights, y_vec, max_iter_count, random_generator):
+    #     y_prev = np.copy(y_vec)
+    #     y_prev[0] -= 1
+    #     curr_iter = 1
+    #     while (not np.array_equal(y_prev, y_vec)) and curr_iter < max_iter_count:
+    #         print(curr_iter)
+    #         y_prev = np.copy(y_vec)
+    #         u = np.matmul(weights, y_vec)
+    #
+    #         # Update one neuron
+    #         update_asychronous(y_vec, u, random_generator)
+    #
+    #         curr_iter += 1
+    #     if np.array_equal(y_prev, y_vec):
+    #         print("Model convergence")
+    #     else:
+    #         print("Iter exceeded")
+    #     return y_vec
+
+
+# # TODO - dlaczego theta jest 0.5? mi to psuje wyniki
+# def process(w, y_vec, theta=0.5, time=100):
+#     for s in range(time):
+#         m = len(y_vec)
+#         # i = random.randint(0,m-1)
+#         for i in range(m):
+#             u = np.matmul(w[i][:],
+#                        y_vec) - theta  # COMMENT: w sumie nie wiem czy to jest sync czy async ale uaktualniam wszytskie po prostu
+#             if u >= 0:
+#                 y_vec[i] = 1
+#             elif u < 0:
+#                 y_vec[i] = -1
+#     return y_vec
 # df_test = read_data("animals-14x9.csv")
 # col = 9
 # data = np.array(df_test);
@@ -95,38 +191,4 @@ def recognition_phase_synchronous(weights, y_vec, max_iter_count):
 #     show(process(weights, data_test))
 #     print()
 
-# TEST CASES
-filename = "animals-14x9.csv"
-height, width = 14, 9
-# filename = "large-25x25.csv"
-# height, width = 25, 25
-# filename = "small-7x7.csv"
-# height, width = 7, 7
 
-df_test = read_data(filename)
-data = df_test.values
-sample_count_M, neurons_count_N = data.shape
-data = data.T
-# print(data.shape)
-T = get_weights_matrix_hebb_rule(data, M=sample_count_M, N=neurons_count_N)
-# print(T.shape)
-
-random_generator = np.random.default_rng(seed=123)
-sample_id = 1
-noise_percentage = 0.1
-noise_changes_count = int(noise_percentage * neurons_count_N)
-
-sample = np.reshape(data[:, sample_id], (neurons_count_N, 1))
-sample_test = get_test_data(np.copy(sample), noise_changes_count, random_generator)
-max_iter_count = get_max_iter_count(sample_count_M)
-
-result_synchronous = recognition_phase_synchronous(T, np.copy(sample_test), max_iter_count)
-print("Accuracy synchronous: {0}".format(np.sum(sample == result_synchronous) / neurons_count_N))
-visualize_result(sample, sample_test, result_synchronous, height, width)
-plt.show()
-
-
-result_asynchronous = process(T, np.copy(sample_test))
-print("Accuracy asynchronous: {0}".format(np.sum(sample == result_asynchronous) / neurons_count_N))
-visualize_result(sample, sample_test, result_asynchronous, height, width)
-plt.show()
