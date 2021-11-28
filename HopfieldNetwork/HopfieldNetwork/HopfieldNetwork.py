@@ -107,7 +107,7 @@ class HopfieldNetwork:
                 self._update_asychronous(y_vec, u)
 
             curr_iter += 1
-        convergence = np.array_equal(y_prev, y_vec)
+            convergence = np.array_equal(y_prev, y_vec)
         if convergence:
             print("Model convergence at {0} iter".format(curr_iter))
         else:
