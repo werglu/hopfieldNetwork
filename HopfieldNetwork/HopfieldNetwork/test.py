@@ -2,22 +2,22 @@ import numpy as np
 from utilities import visualize_result, show, get_test_data
 import matplotlib.pyplot as plt
 from HopfieldNetwork import HopfieldNetwork, LearningRule, Mode
-from data_manager import get_set_small_7x7
+from data_manager import *
 
 # TEST CASE
-data, sample_count_m, neurons_count_n, height, width = get_set_small_7x7()
+data, sample_count_m, neurons_count_n, height, width = get_set_large_25x25()
 
-random_seed = 1234
+random_seed = 123
 
-network = HopfieldNetwork(LearningRule.Hebb, Mode.Synchronous, data, sample_count_m, neurons_count_n, random_seed)
-T_Hebb = network.get_weights()
+network = HopfieldNetwork(LearningRule.Oja, Mode.Synchronous, data, sample_count_m, neurons_count_n, random_seed)
+T_Oja = network.get_weights(0.001, 100)
 
 network.set_learning_rule(LearningRule.Oja)
 T_Oja = network.get_weights(nu=0.001, iter_count=100, eps=1e-14)
-
+print(T_Oja)
 print("Weights done")
-random_generator = np.random.default_rng(seed=123)
 
+random_generator = np.random.default_rng(seed=random_seed)
 for i in range(0, sample_count_m):
     sample_id = i
     noise_percentage = 0.1
@@ -27,7 +27,7 @@ for i in range(0, sample_count_m):
     sample_test = get_test_data(np.copy(sample), noise_changes_count, random_generator)
 
     network.set_mode(Mode.Synchronous)
-    result_synchronous = network.recognize(T_Hebb, np.copy(sample_test))
+    result_synchronous = network.recognize(T_Oja, np.copy(sample_test), 1000)
     print("Accuracy synchronous: {0}".format(np.sum(sample == result_synchronous) / neurons_count_n))
     visualize_result(sample, sample_test, result_synchronous, height, width)
     plt.show()

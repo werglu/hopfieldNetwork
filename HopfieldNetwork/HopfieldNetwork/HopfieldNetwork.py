@@ -35,7 +35,7 @@ class HopfieldNetwork:
         T = np.divide(T, n)
         return T
 
-    def _get_weights_matrix_oja_rule(self, nu, iter_count, eps=1e-14):
+    def _get_weights_matrix_oja_rule_not_working(self, nu, iter_count, eps=1e-14):
         t = self._get_weights_matrix_hebb_rule()
 
         X = self.X
@@ -43,26 +43,42 @@ class HopfieldNetwork:
         n = self.neurons_count
 
         curr_iter = 0
-        while curr_iter < iter_count:
+        while curr_iter < 1:
             curr_iter += 1
-            print(curr_iter)
             t_prev = np.copy(t)
             for k in range(0, m):
                 x_k = X[:, k]
                 y_k = np.matmul(t, x_k)
+                print(y_k.shape)
                 for i in range(n):
-                    for j in range(n):
-                        # p = np.multiply(y_k[i], t[i, :])
-                        # r = np.multiply(y_k[i], (x_k - p))
-                        t[i, j] = nu * y_k[i] * (x_k[j] - y_k[i] * t[i, j])
-                    # p = np.multiply(y_k[i], t[i, :])
-                    # r = np.multiply(y_k[i], (x_k - p))
-                    # t[i, :] += np.multiply(nu, r)
+                    p = np.multiply(y_k[i], t[i, :])
+                    # print(p.shape)
+                    diff = x_k - p
+
+                    # print(diff.shape)
+                    t[i, :] += nu * np.matmul(y_k[i], diff)
+                    # for j in range(n):
+                    #     t[i, j] = nu * y_k[i] * (x_k[j] - y_k[i] * t[i, j])
 
             if np.linalg.norm(t - t_prev) < eps:
                 break
         # TODO - czy zerować wagi na głównej przekątnej?
-        np.fill_diagonal(t, 0)
+        # np.fill_diagonal(t, 0)
+        return t
+
+    def _get_weights_matrix_oja_rule(self, nu, iter_count, eps=1e-14):
+        t = self._get_weights_matrix_hebb_rule()
+
+        X = self.X
+        m = self.vectors_count
+        for it in range(iter_count):
+            for i in range(m):
+                x = X[:, i]
+                t_prev = np.copy(t)
+                y = np.matmul(x, t)
+                t += nu * np.outer(y, (x - np.matmul(y, t)))
+                if np.linalg.norm(t - t_prev) < eps:
+                    break
         return t
 
     def get_weights(self, nu=None, iter_count=None, eps=1e-14):
