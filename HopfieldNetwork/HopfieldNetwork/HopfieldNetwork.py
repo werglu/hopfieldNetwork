@@ -1,5 +1,7 @@
 import numpy as np
 from enum import Enum
+import matplotlib.pyplot as plt
+from utilities import visualize_result_step
 
 
 class Mode(Enum):
@@ -34,37 +36,6 @@ class HopfieldNetwork:
         T = np.matmul(X, np.transpose(X)) - m * np.eye(n)
         T = np.divide(T, n)
         return T
-
-    def _get_weights_matrix_oja_rule_not_working(self, nu, iter_count, eps=1e-14):
-        t = self._get_weights_matrix_hebb_rule()
-
-        X = self.X
-        m = self.vectors_count
-        n = self.neurons_count
-
-        curr_iter = 0
-        while curr_iter < 1:
-            curr_iter += 1
-            t_prev = np.copy(t)
-            for k in range(0, m):
-                x_k = X[:, k]
-                y_k = np.matmul(t, x_k)
-                print(y_k.shape)
-                for i in range(n):
-                    p = np.multiply(y_k[i], t[i, :])
-                    # print(p.shape)
-                    diff = x_k - p
-
-                    # print(diff.shape)
-                    t[i, :] += nu * np.matmul(y_k[i], diff)
-                    # for j in range(n):
-                    #     t[i, j] = nu * y_k[i] * (x_k[j] - y_k[i] * t[i, j])
-
-            if np.linalg.norm(t - t_prev) < eps:
-                break
-        # TODO - czy zerować wagi na głównej przekątnej?
-        # np.fill_diagonal(t, 0)
-        return t
 
     def _get_weights_matrix_oja_rule(self, nu, iter_count, eps=1e-14):
         t = self._get_weights_matrix_hebb_rule()
@@ -101,12 +72,41 @@ class HopfieldNetwork:
             u = np.matmul(weights, y_vec)
 
             if self.mode == Mode.Synchronous:
-                self._update_sychronous(y_vec, u)
+                self._update_synchronous(y_vec, u)
             else:
-                self._update_asychronous(y_vec, u)
+                self._update_asynchronous(y_vec, u)
 
             curr_iter += 1
+
+            convergence = np.array_equal(y_prev, y_vec, )
+        if convergence:
+            print("Model convergence at {0} iter".format(curr_iter))
+        else:
+            print("Iter exceeded")
+        return y_vec
+
+    def recognize_and_animate(self, weights, y_vec, height, weight, original, max_iter_count=None):
+
+        if not max_iter_count:
+            max_iter_count = self._get_max_iter_count()
+
+        curr_iter = 1
+        convergence = False
+        while (not convergence) and curr_iter < max_iter_count:
+            y_prev = np.copy(y_vec)
+            u = np.matmul(weights, y_vec)
+
+            if self.mode == Mode.Synchronous:
+                self._update_synchronous(y_vec, u)
+            else:
+                self._update_asynchronous(y_vec, u)
+
             convergence = np.array_equal(y_prev, y_vec)
+
+            visualize_result_step(y_prev, y_vec, height, weight, original, "Iteration {0}".format(curr_iter))
+            plt.show()
+            curr_iter += 1
+
         if convergence:
             print("Model convergence at {0} iter".format(curr_iter))
         else:
@@ -119,11 +119,11 @@ class HopfieldNetwork:
         else:
             return -1
 
-    def _update_sychronous(self, y, u):
+    def _update_synchronous(self, y, u):
         for i in range(len(u)):
             y[i] = self._update_neuron_value(u[i])
 
-    def _update_asychronous(self, y, u):
+    def _update_asynchronous(self, y, u):
         neu_i = self.random_generator.integers(0, len(y))
         y[neu_i] = self._update_neuron_value(u[neu_i])
 
@@ -178,7 +178,8 @@ class HopfieldNetwork:
 #         # i = random.randint(0,m-1)
 #         for i in range(m):
 #             u = np.matmul(w[i][:],
-#                        y_vec) - theta  # COMMENT: w sumie nie wiem czy to jest sync czy async ale uaktualniam wszytskie po prostu
+#                        y_vec) - theta
+# COMMENT: w sumie nie wiem czy to jest sync czy async ale uaktualniam wszytskie po prostu
 #             if u >= 0:
 #                 y_vec[i] = 1
 #             elif u < 0:

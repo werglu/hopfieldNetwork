@@ -16,14 +16,28 @@ def visualize_data(filename, height, width):
         plt.imshow(im.reshape(height, width), cmap='gray')
 
 
-def visualize_result(original, noised, result, height, width):
-    plt.figure(1, figsize=(height, 3 * width))
-    plt.subplot(1, 3, 1)
-    plt.imshow(original.reshape(height, width), cmap='gray')
-    plt.subplot(1, 3, 2)
-    plt.imshow(noised.reshape(height, width), cmap='gray')
-    plt.subplot(1, 3, 3)
-    plt.imshow(result.reshape(height, width), cmap='gray')
+def visualize_result(original, noised, result, height, width, title=None):
+    fig, axs = plt.subplots(1, 3, constrained_layout=True)
+    if title:
+        fig.suptitle(title, fontsize=16)
+
+    axs[0].imshow(original.reshape(height, width), cmap='gray')
+    axs[0].set_title('Original')
+    axs[1].imshow(noised.reshape(height, width), cmap='gray')
+    axs[1].set_title('Noised')
+    axs[2].imshow(result.reshape(height, width), cmap='gray')
+    axs[2].set_title('Result')
+
+
+def visualize_result_step(prev_y, next_y, height, width, original, title):
+    fig, axs = plt.subplots(1, 3, constrained_layout=True)
+    fig.suptitle(title, fontsize=16)
+    axs[0].imshow(original.reshape(height, width), cmap='gray')
+    axs[0].set_title('Original')
+    axs[1].imshow(prev_y.reshape(height, width), cmap='gray')
+    axs[1].set_title('Previous')
+    axs[2].imshow(next_y.reshape(height, width), cmap='gray')
+    axs[2].set_title('Current')
 
 
 def show(x, col):
