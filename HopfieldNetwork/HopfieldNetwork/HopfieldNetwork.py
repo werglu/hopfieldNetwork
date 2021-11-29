@@ -92,7 +92,6 @@ class HopfieldNetwork:
         if not max_iter_count:
             max_iter_count = self._get_max_iter_count()
 
-        y_prev = np.copy(y_vec)
         curr_iter = 1
         convergence = False
         while (not convergence) and curr_iter < max_iter_count:
