@@ -24,7 +24,7 @@ def get_set_small_7x7():
 
 def get_set_animals_14x9():
     filename = "animals-14x9.csv"
-    height, width = 14, 9
+    height, width = 9, 14
     data, sample_count_m, neurons_count_n = get_data_from_file(filename)
     return data, sample_count_m, neurons_count_n, height, width
 
@@ -45,28 +45,28 @@ def get_set_large_25x25_plus():
 
 def get_set_large_25x50():
     filename = "large-25x50.csv"
-    height, width = 25, 50
+    height, width = 50, 25
     data, sample_count_m, neurons_count_n = get_data_from_file(filename)
     return data, sample_count_m, neurons_count_n, height, width
 
 
 def get_set_letters_14x20():
     filename = "letters-14x20.csv"
-    height, width = 14, 20
+    height, width = 20, 14
     data, sample_count_m, neurons_count_n = get_data_from_file(filename)
     return data, sample_count_m, neurons_count_n, height, width
 
 
 def get_set_letters_abc_8x12():
     filename = "letters-abc-8x12.csv"
-    height, width = 8, 12
+    height, width = 12, 8
     data, sample_count_m, neurons_count_n = get_data_from_file(filename)
     return data, sample_count_m, neurons_count_n, height, width
 
 
 def get_set_OCRA_12x30():
     filename = "OCRA-12x30-cut.csv"
-    height, width = 12, 30
+    height, width = 30, 12
     data, sample_count_m, neurons_count_n = get_data_from_file(filename)
     return data, sample_count_m, neurons_count_n, height, width
 
