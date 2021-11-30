@@ -38,6 +38,11 @@ def visualize_result_step(prev_y, next_y, height, width, original, title):
     axs[1].set_title('Previous')
     axs[2].imshow(next_y.reshape(height, width), cmap='gray')
     axs[2].set_title('Current')
+    for ax_j in axs:
+        ax_j.set_xticks([])
+        ax_j.set_yticks([])
+        ax_j.patch.set_edgecolor('black')
+        ax_j.patch.set_linewidth('2')
 
 
 def show(x, col):
