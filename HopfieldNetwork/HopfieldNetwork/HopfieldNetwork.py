@@ -37,6 +37,16 @@ class HopfieldNetwork:
         T = np.divide(T, n)
         return T
 
+    def _get_weights_ij_hebb_rule(self):
+        x = self.X
+        n = self.neurons_count
+        t = np.zeros((n, n))
+        for i in range(0, n):
+            for j in range(0, n):
+                t[i, j] = np.matmul(x[i], x[j])
+        np.fill_diagonal(t, 0)
+        return np.divide(t, n)
+
     def _get_weights_matrix_oja_rule(self, nu, iter_count, eps=1e-14):
         t = self._get_weights_matrix_hebb_rule()
 
@@ -50,11 +60,17 @@ class HopfieldNetwork:
                 t += nu * np.outer(y, (x - np.matmul(y, t)))
                 if np.linalg.norm(t - t_prev) < eps:
                     break
+                if np.isnan(t).any():
+                    t = t_prev
+                    return t
         return t
 
     def get_weights(self, nu=None, iter_count=None, eps=1e-14):
         if self.rule == LearningRule.Hebb:
-            return self._get_weights_matrix_hebb_rule()
+            if self.vectors_count < 2000:
+                return self._get_weights_matrix_hebb_rule()
+            else:
+                return self._get_weights_ij_hebb_rule()
         else:
             return self._get_weights_matrix_oja_rule(nu, iter_count, eps)
 
@@ -78,7 +94,7 @@ class HopfieldNetwork:
 
             curr_iter += 1
 
-            convergence = np.array_equal(y_prev, y_vec, )
+            convergence = np.array_equal(y_prev, y_vec)
         if convergence:
             print("Model convergence at {0} iter".format(curr_iter))
         else:
@@ -132,43 +148,6 @@ class HopfieldNetwork:
 
     def set_learning_rule(self, rule):
         self.rule = rule
-
-    # def recognition_phase_synchronous(slef, weights, y_vec, max_iter_count):
-    #     y_prev = np.copy(y_vec)
-    #     y_prev[0] -= 1
-    #     curr_iter = 1
-    #     while (not np.array_equal(y_prev, y_vec)) and curr_iter < max_iter_count:
-    #         print(curr_iter)
-    #         y_prev = np.copy(y_vec)
-    #         u = np.matmul(weights, y_vec)
-    #         update_sychronous(y_vec, u)
-    #
-    #         curr_iter += 1
-    #     if np.array_equal(y_prev, y_vec):
-    #         print("Model convergence")
-    #     else:
-    #         print("Iter exceeded")
-    #     return y_vec
-    #
-    #
-    # def recognition_phase_asynchronous(weights, y_vec, max_iter_count, random_generator):
-    #     y_prev = np.copy(y_vec)
-    #     y_prev[0] -= 1
-    #     curr_iter = 1
-    #     while (not np.array_equal(y_prev, y_vec)) and curr_iter < max_iter_count:
-    #         print(curr_iter)
-    #         y_prev = np.copy(y_vec)
-    #         u = np.matmul(weights, y_vec)
-    #
-    #         # Update one neuron
-    #         update_asychronous(y_vec, u, random_generator)
-    #
-    #         curr_iter += 1
-    #     if np.array_equal(y_prev, y_vec):
-    #         print("Model convergence")
-    #     else:
-    #         print("Iter exceeded")
-    #     return y_vec
 
 
 # # TODO - dlaczego theta jest 0.5? mi to psuje wyniki
