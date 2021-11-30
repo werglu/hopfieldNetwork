@@ -60,7 +60,7 @@ class HopfieldNetwork:
                 t += nu * np.outer(y, (x - np.matmul(y, t)))
                 if np.linalg.norm(t - t_prev) < eps:
                     break
-                if np.isnan(t).any():
+                if not np.isfinite(t).all():
                     t = t_prev
                     return t
         return t
